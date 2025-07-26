@@ -4,7 +4,42 @@ Training LLMs with Quantized LoRA + FSDP.
 
 Read our [announcement blog post](https://www.answer.ai/posts/2024-03-06-fsdp-qlora.html).
 
-You should treat this script as an alpha/preview release. If you’re not comfortable with testing and debugging models, we’d suggest holding off for a few months while the community more fully tests the approach.
+You should treat this script as an alpha/preview release. If you're not comfortable with testing and debugging models, we'd suggest holding off for a few months while the community more fully tests the approach.
+
+## New: Multi-Backend Support
+
+FSDP+QLoRA now supports multiple compute backends beyond CUDA:
+- **Apple Silicon** (MPS/MLX) - Train on M1/M2/M3 Macs
+- **CPU** - For testing and development
+- **Auto-detection** - Automatically selects the best available backend
+
+### MLX Framework Integration
+
+New MLX support provides optimized training on Apple Silicon:
+- **4-bit Quantization**: Memory-efficient training with MLX quantization
+- **LoRA Fine-tuning**: Native MLX LoRA implementation
+- **Unified Memory**: Leverages Apple Silicon's unified memory architecture
+- **PyTorch Compatibility**: Seamless integration with existing code
+
+See [MLX Integration Documentation](docs/mlx_integration.md) for details.
+
+### Advanced MPS Quantization
+
+We now provide comprehensive MPS quantization with multiple backends:
+- **MLX Backend**: Native 1-8 bit quantization for Apple Silicon
+- **Quanto Backend**: HuggingFace's cross-platform quantization with MPS support
+- **Custom MPS Backend**: Fallback implementation for PyTorch compatibility
+- **Unified API**: Automatic backend selection based on hardware and requirements
+
+Key features:
+- **Mixed Precision**: Different quantization bits per layer
+- **QLoRA Support**: Fine-tune quantized models on MPS
+- **Memory Optimization**: Automatic memory management for large models
+- **Performance Profiling**: Built-in benchmarking tools
+
+See [MPS Quantization Guide](docs/mps_quantization_guide.md) and [Migration Guide](docs/migration_guide.md) for details.
+
+See [Backend Usage Documentation](docs/backend_usage.md) for general backend information.
 
 ## Integrations
 
@@ -13,15 +48,112 @@ FSDP+QLoRA has been integrated into:
 
 ## Installation
 
-The following steps should work (tested on Cuda 11.7, 11.8 and 12.1):
-- Clone https://github.com/AnswerDotAI/fsdp_qlora
-- `pip install llama-recipes fastcore "transformers!=4.38.*,!=4.39.*" --extra-index-url https://download.pytorch.org/whl/test/cu118` as an easy way to get most dependencies (replace 118 with your desired Cuda version)
-- Install bitsandbytes `pip install bitsandbytes>=0.43.0`
-- Run `huggingface-cli login` (to access Llama 2)
-- Optional Libraries:
-  - HQQ quantization: follow the HQQ installation [instructions](https://github.com/mobiusml/hqq?tab=readme-ov-file#installation). Our training script uses `HQQBackend.ATEN_BACKPROP`, so also make sure to build the custom kernels `cd hqq/kernels && python setup_cuda.py install`.
-  - Weights and Biases logging: `pip install wandb`
-- [Pytorch >= 2.2](https://pytorch.org/blog/pytorch2-2/) is recommended to make use of the native flash-attention 2 kernel.
+### Quick Start (Automatic Platform Detection)
+
+The easiest way to install FSDP+QLoRA is using our automatic setup script:
+
+```bash
+# Clone the repository
+git clone https://github.com/AnswerDotAI/fsdp_qlora
+cd fsdp_qlora
+
+# Run the platform-aware setup script
+python setup.py
+
+# Login to Hugging Face (for model access)
+huggingface-cli login
+```
+
+The setup script will:
+- Automatically detect your platform (CUDA, Apple Silicon, or CPU)
+- Install appropriate dependencies
+- Verify the installation
+- Configure the backend manager
+
+### Platform-Specific Installation
+
+#### NVIDIA GPUs (CUDA)
+
+For systems with NVIDIA GPUs (tested on CUDA 11.7, 11.8, and 12.1):
+
+```bash
+# Install CUDA-specific requirements
+pip install -r requirements-cuda.txt --extra-index-url https://download.pytorch.org/whl/cu118
+
+# Optional: Install Flash Attention 2 for better performance
+pip install flash-attn>=2.5.0
+
+# Optional: HQQ quantization with CUDA kernels
+# Follow HQQ installation instructions at https://github.com/mobiusml/hqq
+cd hqq/kernels && python setup_cuda.py install
+```
+
+#### Apple Silicon (M1/M2/M3 Macs)
+
+For Apple Silicon Macs with MPS/MLX support:
+
+```bash
+# Install Mac-specific requirements
+pip install -r requirements-mac.txt
+
+# Optional: Install MLX for optimized performance
+pip install mlx mlx-lm
+
+# Note: bitsandbytes is not supported on Mac, HQQ is recommended for quantization
+```
+
+#### CPU Installation
+
+For CPU-only systems (useful for development/testing):
+
+```bash
+# Install base requirements
+pip install -r requirements.txt
+
+# Note: Training will be significantly slower on CPU
+```
+
+### Manual Installation
+
+If you prefer manual installation or need specific versions:
+
+```bash
+# Core dependencies
+pip install torch>=2.2.0 transformers>=4.40.0 accelerate>=0.30.0
+
+# Platform-specific quantization
+# For CUDA:
+pip install bitsandbytes>=0.43.0
+
+# For Mac/CPU:
+pip install hqq>=0.1.7
+
+# Additional dependencies
+pip install llama-recipes fastcore safetensors tqdm packaging
+
+# Optional: Logging
+pip install wandb
+```
+
+### Verify Installation
+
+After installation, verify your setup:
+
+```bash
+# Check backend detection
+python -c "from backend_manager import BackendManager; BackendManager(verbose=True)"
+
+# Run tests
+pytest tests/test_backend_manager.py
+```
+
+### Requirements
+
+- Python >= 3.8
+- PyTorch >= 2.2.0 (recommended for Flash Attention 2 support)
+- CUDA 11.7+ (for NVIDIA GPUs)
+- macOS 12.3+ (for Apple Silicon)
+- 16GB+ RAM recommended
 
 ## Finetune Llama-2 70B on Dual 24GB GPUs
 
@@ -42,7 +174,48 @@ python train.py \
 
 This example command currently uses just over 128GB of CPU RAM. If you only have 128GB available, we recommend making a 10-20GB swap file to accommodate the initial spike in usage.
 
+### Apple Silicon Example
+
+To train on Apple Silicon Macs (M1/M2/M3), use the `--backend` flag:
+
+```bash
+python train.py \
+--backend mps \
+--model_name meta-llama/Llama-2-7b-hf \
+--batch_size 2 \
+--context_length 512 \
+--precision fp16 \
+--train_type qlora \
+--use_gradient_checkpointing true \
+--dataset alpaca_sample
+```
+
+Or use `--backend auto` to automatically detect and use the best available backend.
+
 ## Training Options
+
+### Quantization Abstraction
+
+FSDP+QLoRA now includes a unified quantization abstraction layer that automatically handles backend-specific differences:
+
+- **Automatic Method Selection**: Chooses the best quantization method based on your hardware
+- **Backend Compatibility**: Ensures quantization methods work correctly with your backend
+- **Configuration Validation**: Validates settings to prevent incompatible configurations
+- **Fallback Support**: Gracefully handles missing dependencies
+
+See [Quantization Abstraction Documentation](docs/quantization_abstraction.md) for detailed information.
+
+### Model Loading Abstraction
+
+The new model loading abstraction simplifies and unifies model loading across different backends:
+
+- **Unified Interface**: Single API for all model loading scenarios
+- **Backend Optimizations**: Tailored loading strategies for CUDA, MPS, MLX, and CPU
+- **Memory-Efficient Loading**: Support for low-memory and unified memory architectures
+- **Parallel Weight Loading**: Efficient parallel loading for large models
+- **Quantization Integration**: Seamless integration with quantization methods
+
+See [Model Loading Abstraction Documentation](docs/model_loading_abstraction.md) for detailed information.
 
 For quantization we support HQQ and bitsandbytes. We're currently doing benchmarking to help you decide which to use. If you do use bitsandbytes, be sure to pass `--reentrant_checkpointing True` to avoid triggering a bug in bitsandbytes which results in high memory usage (a fix is in progress).
 
@@ -170,6 +343,62 @@ python scripts/block_expansion.py \
 + --train_type hqq_llama_pro \
 + --llama_pro_path /path/to/llama_pro_weights_directory \
 ```
+
+## Learning Rate Schedulers
+
+FSDP+QLoRA now supports advanced learning rate scheduling with configurable warmup:
+
+### Available Schedulers
+
+- **`constant`**: Fixed learning rate (default, no warmup)
+- **`linear`**: Linear decay to 0 after warmup
+- **`cosine`**: Cosine annealing with warmup
+- **`cosine_with_restarts`**: Cosine with hard restarts
+- **`polynomial`**: Polynomial decay (customizable power)
+- **`exponential`**: Exponential decay after warmup
+
+### Basic Usage
+
+```bash
+# Linear schedule with default 10% warmup
+python train.py \
+--lr_scheduler linear \
+--lr 1e-4
+
+# Cosine schedule with custom warmup
+python train.py \
+--lr_scheduler cosine \
+--lr 5e-5 \
+--warmup_steps 1000 \
+--cosine_min_lr_ratio 0.1
+```
+
+### Warmup Configuration
+
+Configure warmup using one of three methods:
+
+```bash
+--warmup_steps 1000        # Exact number of steps
+--warmup_ratio 0.1         # Percentage of total steps
+--warmup_epochs 2          # Number of epochs
+```
+
+By default, all schedulers except `constant` use 10% warmup if not specified.
+
+See [Learning Rate Scheduler Examples](examples/lr_scheduler_example.md) for detailed usage.
+
+## Logging Control
+
+Control the frequency of training metrics logging to reduce output verbosity:
+
+```bash
+# Log every 10 steps instead of every step
+python train.py \
+--log_every_n_steps 10 \
+--log_to wandb
+```
+
+This only affects training metrics (loss, learning rate). Memory and other system metrics are always logged.
 
 ## Low Memory Loading
 
