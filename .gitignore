@@ -13,3 +13,35 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# OS files
+.DS_Store
+
+# IDE and cache directories
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.vscode/
+.idea/
+
+# Virtual environments
+venv/
+env/
+.env
+
+# Development docs and plans
+implementation-plan.md
+MPS_ENHANCEMENT_IMPLEMENTATION_PLAN.md
+PRODUCTION_READINESS_REPORT.md
+claude-docs/
+
+# Test files for development
+test_*.py
+!tests/test_*.py
+
+# Archive directory
+archive/
+
+# Temporary notebooks
+*.ipynb
+!examples/*.ipynb

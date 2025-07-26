@@ -1,0 +1,25 @@
+[tool.ruff]
+# Allow lines to be as long as 150 characters (many pre-existing long lines).
+line-length = 150
+
+# Exclude commonly ignored directories.
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.ipynb",
+]
+
+[tool.ruff.lint]
+# Enable pycodestyle (`E`), Pyflakes (`F`), and a subset of the pyupgrade rules (`UP`).
+select = ["E", "F", "UP"]
+# Ignore line length issues for now (many pre-existing)
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Module level import not at top of file (needed for bitsandbytes patching)
+"train.py" = ["E402"]
+# Local variable assigned but never used (common in tests)
+"tests/*" = ["F841"]

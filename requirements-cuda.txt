@@ -1,0 +1,46 @@
+# CUDA-specific requirements for FSDP QLoRA
+# Use this file when installing on systems with NVIDIA GPUs
+
+# PyTorch with CUDA support - adjust cu118 to match your CUDA version
+# cu118 = CUDA 11.8, cu121 = CUDA 12.1, etc.
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
+
+# Standard dependencies (same as base)
+transformers>=4.40.0,!=4.38.*,!=4.39.*
+accelerate>=0.30.0
+safetensors>=0.4.0
+tqdm>=4.65.0
+packaging>=23.0
+fastcore>=1.5.0
+llama-recipes>=0.0.1
+
+# CUDA-optimized quantization
+bitsandbytes>=0.43.0
+
+# Optional: HQQ with CUDA kernels
+hqq>=0.1.7
+
+# Flash Attention 2 for better performance (requires CUDA)
+flash-attn>=2.5.0; platform_system == 'Linux'
+
+# NVIDIA-specific tools
+nvidia-ml-py>=12.535.108  # For GPU monitoring
+triton>=2.1.0; platform_system == 'Linux'  # For custom kernels
+
+# Logging and monitoring (optional)
+wandb>=0.16.0
+
+# Testing dependencies
+pytest>=7.4.0
+pytest-mock>=3.11.0
+
+# Development dependencies
+ruff>=0.1.0
+black>=23.0.0
+
+# Additional utilities
+psutil>=5.9.0
+gpustat>=1.1.0  # GPU monitoring utility

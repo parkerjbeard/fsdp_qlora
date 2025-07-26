@@ -1,0 +1,31 @@
+# Base requirements for FSDP QLoRA
+# Platform-specific requirements are in requirements-mac.txt and requirements-cuda.txt
+
+# Core dependencies
+torch>=2.2.0
+transformers>=4.40.0,!=4.38.*,!=4.39.*
+accelerate>=0.30.0
+safetensors>=0.4.0
+tqdm>=4.65.0
+packaging>=23.0
+
+# Training dependencies
+fastcore>=1.5.0
+llama-recipes>=0.0.1
+
+# Quantization support
+bitsandbytes>=0.43.0; sys_platform != 'darwin' or platform_machine != 'arm64'
+
+# Logging and monitoring (optional)
+wandb>=0.16.0
+
+# Testing dependencies
+pytest>=7.4.0
+pytest-mock>=3.11.0
+
+# Development dependencies
+ruff>=0.1.0
+black>=23.0.0
+
+# Additional utilities
+psutil>=5.9.0
