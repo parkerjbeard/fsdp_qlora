@@ -1,10 +1,7 @@
-import unittest, tempfile
+import unittest
 import torch
-import torch.nn as nn
 import safetensors
-from safetensors.torch import save_file
 from pathlib import Path
-from transformers.utils import hub, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from glob import glob 
 
 # python -m unittest tests.test_quantize.TestQuantizer.test_quantizer
@@ -31,11 +28,11 @@ class TestBlockExpansion(unittest.TestCase):
         for filename in self.filenames:
             weights = safetensors.torch.load_file(str(filename))
             for k,v in iter(weights.items()):
-                if any(((f"layers.{i}" in k) or (f"layers.{i-1}" in k) for i in new_layer_ids)):
+                if any((f"layers.{i}" in k) or (f"layers.{i-1}" in k) for i in new_layer_ids):
                     verify_weights[k] = v
                     
         for k,v in verify_weights.items():
-            if any(((f"layers.{i}" in k) for i in new_layer_ids)):
+            if any((f"layers.{i}" in k) for i in new_layer_ids):
                 if 'down_proj' in k or 'o_proj' in k:
                     assert torch.equal(v, torch.zeros_like(v))
                 else:

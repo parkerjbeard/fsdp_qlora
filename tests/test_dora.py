@@ -1,12 +1,11 @@
 import sys
 sys.path.append('../scripts/')
-import unittest, tempfile
+import unittest
 from hqq.core.quantize import HQQLinear, HQQBackend, BaseQuantizeConfig
 import torch
 import torch.nn as nn
 from dora import HQQDORA, BNBDORA
 
-import bitsandbytes
 import bitsandbytes as bnb
 from bitsandbytes.nn import Linear4bit
 
